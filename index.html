@@ -5,7 +5,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Тривога! (Simulator) — J-Corp</title>
+
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
 <style>
 :root {
   --bg:#0C131D;
@@ -14,61 +16,266 @@
   --text:#fff;
   --muted:#AAB5C5;
   --border:#34445A;
+  --accent:#478DFF;
+  --selected:#478DFF;
 }
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
-header{padding:15px 20px;background:#111B29;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
-h1{font-size:21px;margin:0 0 5px}
-small{color:var(--muted)}
-.layout{display:grid;grid-template-columns:310px minmax(0,1fr);gap:14px;padding:14px}
-aside{display:flex;flex-direction:column;gap:12px}
-.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px}
-.panel h2{font-size:16px;margin:0 0 12px}
-label{display:block;color:var(--muted);font-size:13px;margin:11px 0 6px}
-select,input,button{width:100%;padding:9px;border:1px solid var(--border);border-radius:7px;background:var(--panel2);color:white}
-input[type=color]{height:40px;padding:3px}
-input[type=range]{padding:0;accent-color:#478DFF}
-button{cursor:pointer;background:#478DFF;border:0;margin-top:10px;font-weight:bold}
-button.secondary{background:#34445A}
-.map-wrap{height:calc(100vh - 95px);min-height:500px;position:relative;border-radius:10px;overflow:hidden;background:#3D4558}
-#map{width:100%;height:100%;background:#3D4558}
-.map-title{position:absolute;z-index:500;top:12px;left:55px;background:#0C131DDD;padding:9px 12px;border-radius:7px;pointer-events:none}
-.status{font-size:12px;line-height:1.5;color:#70D99A;margin-top:10px}
-.status.error{color:#FF8888}
-.value{float:right;color:white}
-.journal{max-height:170px;overflow:auto;font-size:13px;color:var(--muted)}
-.journal-entry{padding:8px 0;border-bottom:1px solid var(--border)}
-.danger{color:#FF7777}
-.leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#172231;color:white}
-@media(max-width:850px){
- .layout{grid-template-columns:1fr}
- .map-wrap{height:65vh;min-height:400px}
+
+* { box-sizing:border-box; }
+
+body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:Arial,sans-serif;
+}
+
+header {
+  padding:15px 20px;
+  background:#111B29;
+  border-bottom:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+h1 {
+  font-size:21px;
+  margin:0 0 5px;
+}
+
+small { color:var(--muted); }
+
+.layout {
+  display:grid;
+  grid-template-columns:320px minmax(0,1fr);
+  gap:14px;
+  padding:14px;
+}
+
+aside {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  min-width:0;
+}
+
+.panel {
+  background:var(--panel);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:14px;
+}
+
+.panel h2 {
+  font-size:16px;
+  margin:0 0 12px;
+}
+
+label {
+  display:block;
+  color:var(--muted);
+  font-size:13px;
+  margin:11px 0 6px;
+}
+
+select,input,button {
+  width:100%;
+  padding:9px;
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:var(--panel2);
+  color:white;
+}
+
+input[type=color] {
+  height:40px;
+  padding:3px;
+}
+
+input[type=range] {
+  padding:0;
+  accent-color:var(--accent);
+}
+
+button {
+  cursor:pointer;
+  background:var(--accent);
+  border:0;
+  margin-top:10px;
+  font-weight:bold;
+}
+
+button.secondary { background:#34445A; }
+
+button:disabled {
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+.map-wrap {
+  height:calc(100vh - 95px);
+  min-height:500px;
+  position:relative;
+  border-radius:10px;
+  overflow:hidden;
+  background:#3D4558;
+}
+
+#map {
+  width:100%;
+  height:100%;
+  background:#3D4558;
+}
+
+.map-title {
+  position:absolute;
+  z-index:500;
+  top:12px;
+  left:55px;
+  background:#0C131DDD;
+  padding:9px 12px;
+  border-radius:7px;
+  pointer-events:none;
+  max-width:calc(100% - 75px);
+}
+
+.status {
+  font-size:12px;
+  line-height:1.5;
+  color:#70D99A;
+  margin-top:10px;
+}
+
+.status.error { color:#FF8888; }
+
+.value {
+  float:right;
+  color:white;
+}
+
+.journal {
+  max-height:220px;
+  overflow:auto;
+  font-size:13px;
+  color:var(--muted);
+}
+
+.journal-entry {
+  padding:9px 0;
+  border-bottom:1px solid var(--border);
+  line-height:1.5;
+}
+
+.journal-entry strong { color:#fff; }
+
+.danger { color:#FF7777 !important; }
+
+.selection-info {
+  background:#202D40;
+  border:1px solid #34445A;
+  border-radius:7px;
+  padding:10px;
+  font-size:13px;
+  line-height:1.5;
+  margin-top:10px;
+}
+
+.selection-info strong { color:#fff; }
+
+.step {
+  font-size:12px;
+  color:#70D99A;
+  margin-bottom:8px;
+}
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background:#172231;
+  color:white;
+}
+
+.leaflet-tooltip {
+  background:#172231;
+  color:white;
+  border:1px solid #34445A;
+}
+
+.leaflet-tooltip:before { display:none; }
+
+@media(max-width:850px) {
+  .layout { grid-template-columns:1fr; }
+  .map-wrap {
+    height:65vh;
+    min-height:400px;
+  }
 }
 </style>
 </head>
+
 <body>
 
 <header>
   <div>
     <h1>Тривога! (Simulator)</h1>
-    <small>by J-Corp · BETA 0.2</small>
+    <small>by J-Corp · BETA 0.3</small>
   </div>
   <small>Демонстраційний симулятор</small>
 </header>
 
 <div class="layout">
+
 <aside>
+
+<section class="panel">
+<h2>Симуляція подій</h2>
+
+<div class="step">КРОК 1 · ОБЕРИ ТИП ПОДІЇ</div>
+
+<label>Тип події</label>
+<select id="eventType">
+  <option>Повітряна тривога</option>
+  <option>Загроза артобстрілу</option>
+  <option>Загроза вуличних боїв</option>
+  <option>Хімічна загроза</option>
+  <option>Радіаційна загроза</option>
+  <option>Відбій</option>
+</select>
+
+<div class="step" style="margin-top:16px">КРОК 2 · ОБЕРИ ОБЛАСТЬ НА КАРТІ</div>
+
+<div class="selection-info" id="selectionInfo">
+  Спочатку обери тип події, потім натисни на область на карті.
+</div>
+
+<div class="step" style="margin-top:16px">КРОК 3 · ОБЕРИ РАЙОНИ</div>
+
+<div id="districtControls">
+  <small>Спочатку потрібно вибрати область на карті.</small>
+</div>
+
+<button id="addEvent" disabled>Оголосити подію</button>
+<button class="secondary" id="backToOblasts" style="display:none">
+  Назад до областей
+</button>
+
+<button class="secondary" id="clearEvents">Очистити журнал</button>
+
+<div class="status" id="eventStatus">
+  Очікування вибору області.
+</div>
+</section>
 
 <section class="panel">
 <h2>Налаштування карти</h2>
 
 <label>Стиль карти</label>
 <select id="mapStyle">
-<option value="osm">OpenStreetMap</option>
-<option value="dark">Темна</option>
-<option value="light">Світла</option>
-<option value="satellite">Супутникова</option>
-<option value="none">Без підкладки</option>
+  <option value="osm">OpenStreetMap</option>
+  <option value="dark">Темна</option>
+  <option value="light">Світла</option>
+  <option value="satellite">Супутникова</option>
+  <option value="none">Без підкладки</option>
 </select>
 
 <label>Фон карти</label>
@@ -96,22 +303,8 @@ button.secondary{background:#34445A}
 <input type="range" id="saturation" min="0" max="200" value="100">
 
 <button class="secondary" id="reset">Скинути налаштування</button>
-<div class="status" id="mapStatus">Завантаження карти…</div>
-</section>
 
-<section class="panel">
-<h2>Симуляція подій</h2>
-<label>Тип події</label>
-<select id="eventType">
-<option>Повітряна тривога</option>
-<option>Загроза артобстрілу</option>
-<option>Загроза вуличних боїв</option>
-<option>Хімічна загроза</option>
-<option>Радіаційна загроза</option>
-<option>Відбій</option>
-</select>
-<button id="addEvent">Додати подію</button>
-<button class="secondary" id="clearEvents">Очистити журнал</button>
+<div class="status" id="mapStatus">Завантаження карти…</div>
 </section>
 
 <section class="panel">
@@ -122,231 +315,695 @@ button.secondary{background:#34445A}
 </aside>
 
 <main class="map-wrap">
-<div class="map-title">Україна · адміністративні межі</div>
-<div id="map"></div>
+  <div class="map-title" id="mapTitle">
+    Україна · адміністративні межі
+  </div>
+  <div id="map"></div>
 </main>
+
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <script>
 (() => {
 "use strict";
 
+/* =========================
+   НАЛАШТУВАННЯ
+========================= */
+
 const DEFAULTS = {
- mapStyle:"osm",
- mapColor:"#3D4558",
- regionFill:"#3D4558",
- borderColor:"#FFFFFF",
- borderWidth:1.5,
- fillOpacity:35,
- tileOpacity:100,
- brightness:100,
- saturation:100
+  mapStyle:"osm",
+  mapColor:"#3D4558",
+  regionFill:"#3D4558",
+  borderColor:"#FFFFFF",
+  borderWidth:1.5,
+  fillOpacity:35,
+  tileOpacity:100,
+  brightness:100,
+  saturation:100
 };
 
 const TILE_URLS = {
- osm:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
- dark:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
- light:"https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
- satellite:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+  osm:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  dark:"https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  light:"https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+  satellite:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
 };
 
-const status = document.getElementById("mapStatus");
-const mapElement = document.getElementById("map");
+const GEOJSON_BASE =
+  "https://cdn.jsdelivr.net/gh/darmat1/ukraine-geo-data@main/geodata";
+
+const $ = id => document.getElementById(id);
 
 if (!window.L) {
- status.textContent = "Leaflet не завантажився. Перевір інтернет-з'єднання.";
- status.className = "status error";
- return;
+  $("mapStatus").textContent =
+    "Leaflet не завантажився. Перевір інтернет-з'єднання.";
+  $("mapStatus").className = "status error";
+  return;
 }
 
+/* =========================
+   КАРТА
+========================= */
+
 const map = L.map("map", {
- center:[48.8,31.2],
- zoom:6,
- zoomControl:true
+  center:[48.8,31.2],
+  zoom:6,
+  zoomControl:true
 });
 
 let settings;
+
 try {
- settings = {...DEFAULTS,...JSON.parse(localStorage.getItem("jc_map_settings_v2") || "{}")};
+  settings = {
+    ...DEFAULTS,
+    ...JSON.parse(localStorage.getItem("jc_map_settings_v3") || "{}")
+  };
 } catch {
- settings = {...DEFAULTS};
+  settings = {...DEFAULTS};
 }
 
 let tiles = null;
-let oblasts = null;
+let oblastLayer = null;
+let districtLayer = null;
 
-function save() {
- try {
-  localStorage.setItem("jc_map_settings_v2",JSON.stringify(settings));
- } catch {}
+let selectedOblast = null;
+let selectedOblastSlug = null;
+let selectedDistricts = new Set();
+let districtFeatures = [];
+
+let loadingDistricts = false;
+
+function saveSettings() {
+  try {
+    localStorage.setItem(
+      "jc_map_settings_v3",
+      JSON.stringify(settings)
+    );
+  } catch {}
 }
 
-function setStatus(message,error=false) {
- status.textContent = message;
- status.className = error ? "status error" : "status";
+function setMapStatus(message,error=false) {
+  $("mapStatus").textContent = message;
+  $("mapStatus").className = error ? "status error" : "status";
 }
 
-function regionStyle() {
- return {
-  color:settings.borderColor,
-  weight:Number(settings.borderWidth),
-  opacity:1,
-  fillColor:settings.regionFill,
-  fillOpacity:Number(settings.fillOpacity)/100
- };
+function setEventStatus(message,error=false) {
+  $("eventStatus").textContent = message;
+  $("eventStatus").className = error ? "status error" : "status";
+}
+
+function baseRegionStyle() {
+  return {
+    color:settings.borderColor,
+    weight:Number(settings.borderWidth),
+    opacity:1,
+    fillColor:settings.regionFill,
+    fillOpacity:Number(settings.fillOpacity)/100
+  };
+}
+
+function selectedRegionStyle() {
+  return {
+    color:"#FFFFFF",
+    weight:2.5,
+    opacity:1,
+    fillColor:"#478DFF",
+    fillOpacity:0.65
+  };
 }
 
 function updateTiles() {
- if (tiles) {
-  map.removeLayer(tiles);
-  tiles = null;
- }
+  if (tiles) {
+    map.removeLayer(tiles);
+    tiles = null;
+  }
 
- mapElement.style.backgroundColor = settings.mapColor;
+  $("map").style.backgroundColor = settings.mapColor;
 
- if (settings.mapStyle !== "none") {
-  tiles = L.tileLayer(TILE_URLS[settings.mapStyle], {
-   maxZoom:19,
-   opacity:Number(settings.tileOpacity)/100,
-   attribution:settings.mapStyle === "satellite"
-    ? "Tiles © Esri"
-    : "© OpenStreetMap contributors"
-  }).addTo(map);
+  if (settings.mapStyle !== "none") {
+    tiles = L.tileLayer(TILE_URLS[settings.mapStyle], {
+      maxZoom:19,
+      opacity:Number(settings.tileOpacity)/100,
+      attribution:settings.mapStyle === "satellite"
+        ? "Tiles © Esri"
+        : "© OpenStreetMap contributors"
+    }).addTo(map);
 
-  tiles.on("tileerror",() => {
-   setStatus("Не вдалося завантажити картографічну підкладку. Контури залишаються окремим шаром.",true);
-  });
- }
+    tiles.on("tileerror",() => {
+      setMapStatus(
+        "Не вдалося завантажити підкладку. Адміністративні межі залишаються окремим шаром.",
+        true
+      );
+    });
+  }
 
- const pane = map.getPane("tilePane");
- pane.style.filter =
-  `brightness(${settings.brightness}%) saturate(${settings.saturation}%)`;
+  map.getPane("tilePane").style.filter =
+    `brightness(${settings.brightness}%) saturate(${settings.saturation}%)`;
 }
 
-function updateRegions() {
- if (oblasts) oblasts.setStyle(regionStyle());
+function updateRegionStyles() {
+  if (oblastLayer && !selectedOblast) {
+    oblastLayer.setStyle(baseRegionStyle());
+  }
+
+  if (districtLayer) {
+    districtLayer.eachLayer(layer => {
+      const name = getFeatureName(layer.feature);
+
+      if (selectedDistricts.has(name)) {
+        layer.setStyle(selectedRegionStyle());
+      } else {
+        layer.setStyle(baseRegionStyle());
+      }
+    });
+  }
 }
 
 function updateLabels() {
- document.getElementById("widthValue").textContent = settings.borderWidth+" px";
- document.getElementById("fillValue").textContent = settings.fillOpacity+"%";
- document.getElementById("tileValue").textContent = settings.tileOpacity+"%";
- document.getElementById("brightnessValue").textContent = settings.brightness+"%";
- document.getElementById("saturationValue").textContent = settings.saturation+"%";
+  $("widthValue").textContent = settings.borderWidth+" px";
+  $("fillValue").textContent = settings.fillOpacity+"%";
+  $("tileValue").textContent = settings.tileOpacity+"%";
+  $("brightnessValue").textContent = settings.brightness+"%";
+  $("saturationValue").textContent = settings.saturation+"%";
 }
 
 function showSettings() {
- Object.keys(DEFAULTS).forEach(key => {
-  document.getElementById(key).value = settings[key];
- });
- updateLabels();
+  Object.keys(DEFAULTS).forEach(key => {
+    $(key).value = settings[key];
+  });
+
+  updateLabels();
 }
 
-function refresh() {
- updateTiles();
- updateRegions();
- updateLabels();
- save();
- map.invalidateSize();
+function refreshSettings() {
+  updateTiles();
+  updateRegionStyles();
+  updateLabels();
+  saveSettings();
+  map.invalidateSize();
 }
 
 Object.keys(DEFAULTS).forEach(key => {
- document.getElementById(key).addEventListener("input",event => {
-  const numeric = [
-   "borderWidth","fillOpacity","tileOpacity","brightness","saturation"
-  ].includes(key);
+  $(key).addEventListener("input",event => {
+    const numeric = [
+      "borderWidth",
+      "fillOpacity",
+      "tileOpacity",
+      "brightness",
+      "saturation"
+    ].includes(key);
 
-  settings[key] = numeric ? Number(event.target.value) : event.target.value;
+    settings[key] = numeric
+      ? Number(event.target.value)
+      : event.target.value;
 
-  if (["mapStyle","mapColor","tileOpacity","brightness","saturation"].includes(key)) {
-   updateTiles();
-  }
+    if ([
+      "mapStyle",
+      "mapColor",
+      "tileOpacity",
+      "brightness",
+      "saturation"
+    ].includes(key)) {
+      updateTiles();
+    }
 
-  updateRegions();
-  updateLabels();
-  save();
- });
+    updateRegionStyles();
+    updateLabels();
+    saveSettings();
+  });
 });
 
-document.getElementById("reset").addEventListener("click",() => {
- settings = {...DEFAULTS};
- showSettings();
- refresh();
+$("reset").addEventListener("click",() => {
+  settings = {...DEFAULTS};
+  showSettings();
+  refreshSettings();
 });
 
 showSettings();
 updateTiles();
 
-const GEOJSON_URL =
- "https://cdn.jsdelivr.net/gh/romansverdan/Ukraine-Map@main/ukraine-adm-regions.json";
+/* =========================
+   GEOJSON: НАЗВИ ТА SLUG
+========================= */
 
-fetch(GEOJSON_URL)
- .then(response => {
-  if (!response.ok) throw new Error("HTTP "+response.status);
-  return response.json();
- })
- .then(data => {
-  if (!data.features || !data.features.length) {
-   throw new Error("GeoJSON не містить географічних об'єктів");
+function getFeatureName(feature) {
+  const props = feature?.properties || {};
+
+  return (
+    props.name ||
+    props.NAME_1 ||
+    props.NAME ||
+    props.name_uk ||
+    "Невідома територія"
+  );
+}
+
+function toSlug(text) {
+  const mapLetters = {
+    "а":"a","б":"b","в":"v","г":"h","ґ":"g",
+    "д":"d","е":"e","є":"ye","ж":"zh","з":"z",
+    "и":"y","і":"i","ї":"yi","й":"y","к":"k",
+    "л":"l","м":"m","н":"n","о":"o","п":"p",
+    "р":"r","с":"s","т":"t","у":"u","ф":"f",
+    "х":"kh","ц":"ts","ч":"ch","ш":"sh","щ":"shch",
+    "ь":"","ю":"yu","я":"ya",
+    "'":"","ʼ":""
+  };
+
+  let result = "";
+
+  for (const char of text.toLowerCase()) {
+    result += mapLetters[char] !== undefined
+      ? mapLetters[char]
+      : char;
   }
 
-  oblasts = L.geoJSON(data,{
-   style:regionStyle,
-   onEachFeature:(feature,layer) => {
-    const props = feature.properties || {};
-    const name = props.UA_NAME || props.NAME_1 || "Область";
+  return result
+    .replace(/[^a-z0-9]+/g,"_")
+    .replace(/_+/g,"_")
+    .replace(/^_|_$/g,"");
+}
 
-    layer.bindTooltip(name,{sticky:true});
-    layer.bindPopup("<strong>"+String(name).replace(/[&<>"]/g,c => ({
-     "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"
-    }[c]))+"</strong>");
-   }
-  }).addTo(map);
+async function loadGeoJSON(path) {
+  const url = `${GEOJSON_BASE}/${path}.geojson`;
 
-  map.fitBounds(oblasts.getBounds(),{padding:[18,18]});
+  const response = await fetch(url);
 
-  setStatus(
-   "Завантажено "+data.features.length+
-   " адміністративних територій. Натискай на область, щоб побачити назву."
+  if (!response.ok) {
+    throw new Error(
+      `Не вдалося завантажити ${path}.geojson: HTTP ${response.status}`
+    );
+  }
+
+  const data = await response.json();
+
+  if (!data.features || !Array.isArray(data.features)) {
+    throw new Error("Отриманий файл не містить GeoJSON features.");
+  }
+
+  return data;
+}
+
+/* =========================
+   ПОЧАТКОВЕ ЗАВАНТАЖЕННЯ ОБЛАСТЕЙ
+========================= */
+
+async function loadOblasts() {
+  setMapStatus("Завантаження областей України…");
+
+  try {
+    const data = await loadGeoJSON("Ukraine");
+
+    oblastLayer = L.geoJSON(data, {
+      style:baseRegionStyle,
+
+      onEachFeature:(feature,layer) => {
+        const name = getFeatureName(feature);
+
+        layer.bindTooltip(name,{sticky:true});
+
+        layer.on("click",() => {
+          selectOblast(feature);
+        });
+      }
+    }).addTo(map);
+
+    map.fitBounds(oblastLayer.getBounds(), {
+      padding:[18,18]
+    });
+
+    setMapStatus(
+      `Завантажено ${data.features.length} адміністративних територій. Натисни на область.`
+    );
+
+  } catch(error) {
+    console.error(error);
+
+    setMapStatus(
+      "Не вдалося завантажити області. Перевір інтернет або доступність GeoJSON.",
+      true
+    );
+  }
+}
+
+/* =========================
+   ВИБІР ОБЛАСТІ
+========================= */
+
+async function selectOblast(feature) {
+  if (loadingDistricts) return;
+
+  const name = getFeatureName(feature);
+  const slug = toSlug(name);
+
+  selectedOblast = name;
+  selectedOblastSlug = slug;
+  selectedDistricts.clear();
+
+  $("mapTitle").textContent = name;
+  $("backToOblasts").style.display = "block";
+  $("addEvent").disabled = true;
+
+  $("selectionInfo").innerHTML =
+    `<strong>Область:</strong> ${escapeHTML(name)}<br>`+
+    `Завантаження районів…`;
+
+  $("districtControls").innerHTML =
+    "<small>Завантаження районів області…</small>";
+
+  setEventStatus("Завантаження районів…");
+
+  if (oblastLayer) {
+    map.removeLayer(oblastLayer);
+    oblastLayer = null;
+  }
+
+  if (districtLayer) {
+    map.removeLayer(districtLayer);
+    districtLayer = null;
+  }
+
+  districtFeatures = [];
+  loadingDistricts = true;
+
+  try {
+    const data = await loadGeoJSON(slug);
+
+    districtFeatures = data.features;
+
+    districtLayer = L.geoJSON(data, {
+      style:baseRegionStyle,
+
+      onEachFeature:(district,layer) => {
+        const districtName = getFeatureName(district);
+
+        layer.bindTooltip(districtName,{sticky:true});
+
+        layer.on("click",() => {
+          toggleDistrict(districtName,layer);
+        });
+      }
+    }).addTo(map);
+
+    map.fitBounds(districtLayer.getBounds(), {
+      padding:[20,20]
+    });
+
+    renderDistrictControls();
+
+    $("selectionInfo").innerHTML =
+      `<strong>Область:</strong> ${escapeHTML(name)}<br>`+
+      `<strong>Районів:</strong> ${districtFeatures.length}<br>`+
+      `<strong>Обрано:</strong> <span id="selectedCount">0</span>`;
+
+    setEventStatus(
+      "Тепер натискай на райони на карті або вибирай їх зі списку."
+    );
+
+  } catch(error) {
+    console.error(error);
+
+    $("districtControls").innerHTML =
+      "<small>Не вдалося завантажити райони цієї області.</small>";
+
+    $("selectionInfo").innerHTML =
+      `<strong>Область:</strong> ${escapeHTML(name)}<br>`+
+      "Помилка завантаження районів.";
+
+    setEventStatus(
+      "Не вдалося отримати GeoJSON районів. Перевір доступність джерела.",
+      true
+    );
+
+  } finally {
+    loadingDistricts = false;
+  }
+}
+
+/* =========================
+   ВИБІР РАЙОНІВ
+========================= */
+
+function toggleDistrict(name,layer) {
+  if (selectedDistricts.has(name)) {
+    selectedDistricts.delete(name);
+    layer.setStyle(baseRegionStyle());
+  } else {
+    selectedDistricts.add(name);
+    layer.setStyle(selectedRegionStyle());
+  }
+
+  updateSelectionInfo();
+  updateDistrictCheckboxes();
+}
+
+function updateSelectionInfo() {
+  const count = selectedDistricts.size;
+
+  const countElement = $("selectedCount");
+
+  if (countElement) {
+    countElement.textContent = count;
+  }
+
+  $("addEvent").disabled = count === 0;
+
+  if (count === 0) {
+    setEventStatus("Обери хоча б один район.");
+  } else {
+    setEventStatus(`Обрано районів: ${count}. Можна оголошувати подію.`);
+  }
+}
+
+function renderDistrictControls() {
+  const container = $("districtControls");
+
+  if (!districtFeatures.length) {
+    container.innerHTML = "<small>Районів не знайдено.</small>";
+    return;
+  }
+
+  container.innerHTML = "";
+
+  const allButton = document.createElement("button");
+  allButton.className = "secondary";
+  allButton.textContent = "Вибрати всі райони";
+  allButton.addEventListener("click",() => {
+    selectAllDistricts();
+  });
+
+  container.appendChild(allButton);
+
+  const clearButton = document.createElement("button");
+  clearButton.className = "secondary";
+  clearButton.textContent = "Зняти всі позначки";
+  clearButton.addEventListener("click",() => {
+    clearDistrictSelection();
+  });
+
+  container.appendChild(clearButton);
+
+  const list = document.createElement("div");
+  list.style.marginTop = "12px";
+  list.style.maxHeight = "250px";
+  list.style.overflowY = "auto";
+
+  districtFeatures.forEach(feature => {
+    const name = getFeatureName(feature);
+
+    const row = document.createElement("label");
+    row.style.display = "flex";
+    row.style.alignItems = "center";
+    row.style.gap = "8px";
+    row.style.margin = "8px 0";
+    row.style.color = "#fff";
+    row.style.cursor = "pointer";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.dataset.district = name;
+    checkbox.checked = selectedDistricts.has(name);
+    checkbox.style.width = "17px";
+    checkbox.style.height = "17px";
+    checkbox.style.margin = "0";
+    checkbox.style.flexShrink = "0";
+
+    checkbox.addEventListener("change",() => {
+      const layer = findDistrictLayer(name);
+
+      if (layer) {
+        toggleDistrict(name,layer);
+      }
+    });
+
+    const text = document.createElement("span");
+    text.textContent = name;
+    text.style.fontSize = "13px";
+
+    row.append(checkbox,text);
+    list.appendChild(row);
+  });
+
+  container.appendChild(list);
+}
+
+function updateDistrictCheckboxes() {
+  document.querySelectorAll("[data-district]").forEach(input => {
+    input.checked = selectedDistricts.has(input.dataset.district);
+  });
+}
+
+function findDistrictLayer(name) {
+  let found = null;
+
+  if (!districtLayer) return null;
+
+  districtLayer.eachLayer(layer => {
+    if (getFeatureName(layer.feature) === name) {
+      found = layer;
+    }
+  });
+
+  return found;
+}
+
+function selectAllDistricts() {
+  districtFeatures.forEach(feature => {
+    selectedDistricts.add(getFeatureName(feature));
+  });
+
+  updateRegionStyles();
+  updateDistrictCheckboxes();
+  updateSelectionInfo();
+}
+
+function clearDistrictSelection() {
+  selectedDistricts.clear();
+
+  updateRegionStyles();
+  updateDistrictCheckboxes();
+  updateSelectionInfo();
+}
+
+/* =========================
+   НАЗАД ДО ОБЛАСТЕЙ
+========================= */
+
+async function backToOblasts() {
+  selectedOblast = null;
+  selectedOblastSlug = null;
+  selectedDistricts.clear();
+  districtFeatures = [];
+
+  if (districtLayer) {
+    map.removeLayer(districtLayer);
+    districtLayer = null;
+  }
+
+  $("mapTitle").textContent = "Україна · адміністративні межі";
+  $("backToOblasts").style.display = "none";
+
+  $("districtControls").innerHTML =
+    "<small>Спочатку потрібно вибрати область на карті.</small>";
+
+  $("selectionInfo").textContent =
+    "Натисни на область на карті, щоб вибрати райони.";
+
+  $("addEvent").disabled = true;
+
+  await loadOblasts();
+}
+
+$("backToOblasts").addEventListener("click",backToOblasts);
+
+/* =========================
+   ОГОЛОШЕННЯ ПОДІЇ
+========================= */
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g,char => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#039;"
+  })[char]);
+}
+
+function addJournalEntry(type,oblast,raions) {
+  const journal = $("journal");
+
+  if (journal.textContent.trim() === "Подій поки немає.") {
+    journal.textContent = "";
+  }
+
+  const entry = document.createElement("div");
+  entry.className = "journal-entry";
+
+  const title = document.createElement("strong");
+  title.textContent = type;
+
+  if (type !== "Відбій") {
+    title.className = "danger";
+  }
+
+  const area = document.createElement("div");
+  area.textContent = "Область: " + oblast;
+
+  const districts = document.createElement("div");
+  districts.textContent = "Райони: " + raions.join(", ");
+
+  const time = document.createElement("small");
+  time.textContent = new Date().toLocaleString("uk-UA");
+
+  entry.append(title,area,districts,time);
+  journal.prepend(entry);
+}
+
+$("addEvent").addEventListener("click",() => {
+  const type = $("eventType").value;
+
+  if (!selectedOblast || selectedDistricts.size === 0) {
+    setEventStatus("Спочатку обери область та хоча б один район.",true);
+    return;
+  }
+
+  const districts = Array.from(selectedDistricts);
+
+  addJournalEntry(type,selectedOblast,districts);
+
+  setEventStatus(
+    `Подію «${type}» додано для області «${selectedOblast}».`
   );
- })
- .catch(error => {
-  console.error(error);
-  setStatus("Не вдалося завантажити GeoJSON. Перевір інтернет або доступність джерела.",true);
- });
 
-const journal = document.getElementById("journal");
-
-document.getElementById("addEvent").addEventListener("click",() => {
- const type = document.getElementById("eventType").value;
-
- if (journal.textContent.trim() === "Подій поки немає.") {
-  journal.textContent = "";
- }
-
- const entry = document.createElement("div");
- entry.className = "journal-entry";
-
- const title = document.createElement("strong");
- title.textContent = type;
- if (type !== "Відбій") title.className = "danger";
-
- const time = document.createElement("div");
- time.textContent = new Date().toLocaleTimeString("uk-UA");
-
- entry.append(title,time);
- journal.prepend(entry);
+  selectedDistricts.clear();
+  updateRegionStyles();
+  updateDistrictCheckboxes();
+  updateSelectionInfo();
 });
 
-document.getElementById("clearEvents").addEventListener("click",() => {
- journal.textContent = "Подій поки немає.";
+$("clearEvents").addEventListener("click",() => {
+  $("journal").textContent = "Подій поки немає.";
+  setEventStatus("Журнал очищено.");
 });
 
-window.addEventListener("resize",() => map.invalidateSize());
+/* =========================
+   ЗАПУСК
+========================= */
+
+loadOblasts();
+
+window.addEventListener("resize",() => {
+  map.invalidateSize();
+});
+
 setTimeout(() => map.invalidateSize(),300);
 
 })();
 </script>
+
 </body>
 </html>
