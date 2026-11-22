@@ -1,0 +1,845 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0C131D">
+
+  <title>Тривога! (Simulator)</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+
+  <style>
+    :root {
+      --app-bg: #0C131D;
+      --map-bg: #3D4558;
+      --contour: #FFFFFF;
+      --panel-bg: #151F2D;
+      --panel-hover: #202D3E;
+      --text: #FFFFFF;
+      --muted: #9BA9BA;
+      --accent: #477DCE;
+      --danger: #D94B4B;
+      --success: #38A875;
+      --border: rgba(255,255,255,0.13);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--app-bg);
+      color: var(--text);
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app {
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* HEADER */
+
+    .header {
+      height: 62px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      background: var(--app-bg);
+      border-bottom: 1px solid var(--border);
+      z-index: 500;
+    }
+
+    .brand {
+      font-size: 19px;
+      font-weight: 700;
+    }
+
+    .brand small {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 400;
+    }
+
+    .beta {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    /* MAIN */
+
+    .main {
+      flex: 1;
+      min-height: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .page {
+      display: none;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* MAP */
+
+    #mapPage {
+      overflow: hidden;
+      background: var(--map-bg);
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      background: var(--map-bg);
+    }
+
+    .leaflet-container {
+      background: var(--map-bg);
+      font-family: Arial, sans-serif;
+    }
+
+    .leaflet-control-zoom a {
+      background: var(--panel-bg) !important;
+      color: white !important;
+      border-color: var(--border) !important;
+    }
+
+    .leaflet-control-attribution {
+      background: rgba(12,19,29,0.8) !important;
+      color: white !important;
+    }
+
+    .leaflet-control-attribution a {
+      color: #9DC5FF !important;
+    }
+
+    /* CONTENT PAGES */
+
+    .content {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .section-title {
+      margin-bottom: 7px;
+      font-size: 23px;
+    }
+
+    .section-description {
+      margin-bottom: 22px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .panel {
+      margin-bottom: 17px;
+      padding: 17px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .panel h3 {
+      margin-bottom: 13px;
+      font-size: 15px;
+    }
+
+    /* CATEGORIES */
+
+    .categories {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .category-button {
+      min-height: 58px;
+      padding: 12px;
+      color: white;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      text-align: left;
+      transition: background 0.15s;
+    }
+
+    .category-button:hover {
+      background: var(--panel-hover);
+    }
+
+    .category-button.selected {
+      border-color: var(--accent);
+      background: rgba(71,125,206,0.2);
+    }
+
+    .category-button .category-name {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .category-button .category-type {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .category-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin-right: 6px;
+      border-radius: 50%;
+    }
+
+    .air { background: #E64B4B; }
+    .artillery { background: #E58B37; }
+    .street { background: #B65CCB; }
+    .chemical { background: #C5B83F; }
+    .radiation { background: #70B94D; }
+    .all-clear { background: #38A875; }
+
+    .action-button {
+      width: 100%;
+      min-height: 43px;
+      margin-top: 13px;
+      padding: 11px 15px;
+      color: white;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .action-button:hover {
+      filter: brightness(1.12);
+    }
+
+    .action-button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .clear-button {
+      background: var(--success);
+    }
+
+    /* JOURNAL */
+
+    .journal {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .journal-empty {
+      padding: 18px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .journal-item {
+      padding: 12px;
+      background: rgba(255,255,255,0.035);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .journal-item strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+
+    .journal-item small {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    /* INFO */
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .info-row span:last-child {
+      color: var(--muted);
+      text-align: right;
+    }
+
+    /* SETTINGS */
+
+    .setting {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 15px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .setting:last-child {
+      border-bottom: none;
+    }
+
+    .setting label {
+      font-size: 13px;
+    }
+
+    .setting input[type="color"] {
+      width: 48px;
+      height: 32px;
+      padding: 2px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .setting input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+    }
+
+    .reset-button {
+      width: 100%;
+      margin-top: 15px;
+      padding: 12px;
+      color: white;
+      background: var(--panel-hover);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    /* BOTTOM NAVIGATION */
+
+    .bottom-nav {
+      height: 66px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: stretch;
+      justify-content: space-around;
+      background: var(--app-bg);
+      border-top: 1px solid var(--border);
+      z-index: 500;
+    }
+
+    .nav-button {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      color: var(--muted);
+      background: transparent;
+      border: none;
+      font-size: 11px;
+    }
+
+    .nav-button .nav-icon {
+      font-size: 19px;
+    }
+
+    .nav-button.active {
+      color: white;
+    }
+
+    .nav-button.active .nav-icon {
+      color: #78A9F0;
+    }
+
+    .demo-note {
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    @media (max-width: 520px) {
+      .header {
+        height: 56px;
+        padding: 0 13px;
+      }
+
+      .brand {
+        font-size: 16px;
+      }
+
+      .content {
+        padding: 16px;
+      }
+
+      .categories {
+        grid-template-columns: 1fr;
+      }
+
+      .bottom-nav {
+        height: 62px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+<div class="app">
+
+  <header class="header">
+    <div class="brand">
+      Тривога! (Simulator)
+      <small>by J-Corp · BETA 0.1</small>
+    </div>
+
+    <div class="beta">SIMULATOR</div>
+  </header>
+
+  <main class="main">
+
+    <!-- MAP PAGE -->
+    <section class="page active" id="mapPage">
+      <div id="map"></div>
+    </section>
+
+    <!-- ALERT PAGE -->
+    <section class="page" id="alertPage">
+      <div class="content">
+
+        <h1 class="section-title">Сповіщення</h1>
+        <p class="section-description">
+          Оберіть категорію демонстраційної події.
+        </p>
+
+        <div class="panel">
+          <h3>Категорії</h3>
+
+          <div class="categories">
+
+            <button class="category-button" data-category="Повітряна тривога">
+              <span class="category-name">
+                <span class="category-dot air"></span>
+                Повітряна тривога
+              </span>
+              <span class="category-type">Тривога</span>
+            </button>
+
+            <button class="category-button" data-category="Загроза артобстрілу">
+              <span class="category-name">
+                <span class="category-dot artillery"></span>
+                Загроза артобстрілу
+              </span>
+              <span class="category-type">Загроза</span>
+            </button>
+
+            <button class="category-button" data-category="Загроза вуличних боїв">
+              <span class="category-name">
+                <span class="category-dot street"></span>
+                Загроза вуличних боїв
+              </span>
+              <span class="category-type">Загроза</span>
+            </button>
+
+            <button class="category-button" data-category="Хімічна загроза">
+              <span class="category-name">
+                <span class="category-dot chemical"></span>
+                Хімічна загроза
+              </span>
+              <span class="category-type">Загроза</span>
+            </button>
+
+            <button class="category-button" data-category="Радіаційна загроза">
+              <span class="category-name">
+                <span class="category-dot radiation"></span>
+                Радіаційна загроза
+              </span>
+              <span class="category-type">Загроза</span>
+            </button>
+
+            <button class="category-button" data-category="Відбій">
+              <span class="category-name">
+                <span class="category-dot all-clear"></span>
+                Відбій
+              </span>
+              <span class="category-type">Завершення</span>
+            </button>
+
+          </div>
+
+          <button class="action-button" id="addEvent">
+            Додати подію
+          </button>
+
+          <p class="demo-note">
+            Усі події створюються вручну та є демонстраційними.
+            Програма не отримує офіційних сповіщень.
+          </p>
+        </div>
+
+        <div class="panel">
+          <h3>Журнал подій</h3>
+          <div class="journal" id="journal">
+            <div class="journal-empty">
+              Подій поки немає.
+            </div>
+          </div>
+
+          <button class="action-button clear-button" id="clearJournal">
+            Очистити журнал
+          </button>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- INFO PAGE -->
+    <section class="page" id="infoPage">
+      <div class="content">
+
+        <h1 class="section-title">Інформація</h1>
+        <p class="section-description">
+          Інформація про програму та її поточну версію.
+        </p>
+
+        <div class="panel">
+          <h3>Про програму</h3>
+
+          <div class="info-row">
+            <span>Назва</span>
+            <span>Тривога! (Simulator)</span>
+          </div>
+
+          <div class="info-row">
+            <span>Розробник</span>
+            <span>J-Corp</span>
+          </div>
+
+          <div class="info-row">
+            <span>Версія</span>
+            <span>BETA 0.1</span>
+          </div>
+
+          <div class="info-row">
+            <span>Картографія</span>
+            <span>Leaflet</span>
+          </div>
+
+          <div class="info-row">
+            <span>Картографічні дані</span>
+            <span>OpenStreetMap</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Призначення</h3>
+          <p class="section-description" style="margin:0">
+            Тривога! (Simulator) — демонстраційна програма
+            для перегляду карти та створення тестових подій.
+            Вона не є офіційною системою оповіщення населення.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SETTINGS PAGE -->
+    <section class="page" id="settingsPage">
+      <div class="content">
+
+        <h1 class="section-title">Налаштування</h1>
+        <p class="section-description">
+          Зміна зовнішнього вигляду програми.
+        </p>
+
+        <div class="panel">
+          <h3>Кольори</h3>
+
+          <div class="setting">
+            <label for="mapColor">Колір карти</label>
+            <input type="color" id="mapColor" value="#3D4558">
+          </div>
+
+          <div class="setting">
+            <label for="backgroundColor">Фон програми</label>
+            <input type="color" id="backgroundColor" value="#0C131D">
+          </div>
+
+          <div class="setting">
+            <label for="contourColor">Колір контурів</label>
+            <input type="color" id="contourColor" value="#FFFFFF">
+          </div>
+
+          <button class="reset-button" id="resetColors">
+            Відновити стандартні кольори
+          </button>
+        </div>
+
+        <div class="panel">
+          <h3>Карта</h3>
+
+          <div class="setting">
+            <label for="osmToggle">Показувати карту OpenStreetMap</label>
+            <input type="checkbox" id="osmToggle" checked>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="bottom-nav">
+
+    <button class="nav-button" data-page="alertPage">
+      <span class="nav-icon">⚠</span>
+      <span>Тривога</span>
+    </button>
+
+    <button class="nav-button active" data-page="mapPage">
+      <span class="nav-icon">🌐</span>
+      <span>Мапа</span>
+    </button>
+
+    <button class="nav-button" data-page="infoPage">
+      <span class="nav-icon">ⓘ</span>
+      <span>Інфо</span>
+    </button>
+
+    <button class="nav-button" data-page="settingsPage">
+      <span class="nav-icon">⚙</span>
+      <span>Налаштування</span>
+    </button>
+
+  </nav>
+
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  // =====================================
+  // ТРИВОГА! (SIMULATOR)
+  // J-Corp | BETA 0.1
+  // =====================================
+
+  // MAP
+
+  const map = L.map("map", {
+    zoomControl: true
+  }).setView([49.0, 31.0], 6);
+
+  const osmLayer = L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }
+  );
+
+  osmLayer.addTo(map);
+
+  // NAVIGATION
+
+  const navButtons = document.querySelectorAll(".nav-button");
+  const pages = document.querySelectorAll(".page");
+
+  navButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      const pageId = button.dataset.page;
+
+      pages.forEach(page => {
+        page.classList.toggle("active", page.id === pageId);
+      });
+
+      navButtons.forEach(item => {
+        item.classList.toggle("active", item === button);
+      });
+
+      if (pageId === "mapPage") {
+        setTimeout(() => map.invalidateSize(), 100);
+      }
+    });
+  });
+
+  // CATEGORIES
+
+  let selectedCategory = null;
+
+  const categoryButtons = document.querySelectorAll(".category-button");
+  const addEventButton = document.getElementById("addEvent");
+
+  categoryButtons.forEach(button => {
+    button.addEventListener("click", () => {
+      selectedCategory = button.dataset.category;
+
+      categoryButtons.forEach(item => {
+        item.classList.toggle("selected", item === button);
+      });
+    });
+  });
+
+  // JOURNAL
+
+  const journal = document.getElementById("journal");
+  let events = [];
+
+  function renderJournal() {
+    journal.innerHTML = "";
+
+    if (events.length === 0) {
+      journal.innerHTML = `
+        <div class="journal-empty">
+          Подій поки немає.
+        </div>
+      `;
+      return;
+    }
+
+    events.forEach(event => {
+      const item = document.createElement("div");
+      item.className = "journal-item";
+
+      const title = document.createElement("strong");
+      title.textContent = event.category;
+
+      const time = document.createElement("small");
+      time.textContent = event.time;
+
+      item.appendChild(title);
+      item.appendChild(time);
+      journal.appendChild(item);
+    });
+  }
+
+  addEventButton.addEventListener("click", () => {
+    if (!selectedCategory) {
+      alert("Спочатку оберіть категорію події.");
+      return;
+    }
+
+    const now = new Date();
+
+    const time = now.toLocaleString("uk-UA", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+
+    events.unshift({
+      category: selectedCategory,
+      time: time
+    });
+
+    renderJournal();
+  });
+
+  document.getElementById("clearJournal").addEventListener("click", () => {
+    events = [];
+    renderJournal();
+  });
+
+  // COLOR SETTINGS
+
+  const root = document.documentElement;
+
+  const mapColor = document.getElementById("mapColor");
+  const backgroundColor = document.getElementById("backgroundColor");
+  const contourColor = document.getElementById("contourColor");
+
+  function updateColors() {
+    root.style.setProperty("--map-bg", mapColor.value);
+    root.style.setProperty("--app-bg", backgroundColor.value);
+    root.style.setProperty("--contour", contourColor.value);
+
+    document.querySelectorAll(".panel").forEach(panel => {
+      panel.style.borderColor = contourColor.value + "30";
+    });
+
+    document.querySelectorAll(".category-button").forEach(button => {
+      button.style.borderColor = contourColor.value + "30";
+    });
+
+    map.getContainer().style.backgroundColor = mapColor.value;
+  }
+
+  mapColor.addEventListener("input", updateColors);
+  backgroundColor.addEventListener("input", updateColors);
+  contourColor.addEventListener("input", updateColors);
+
+  // RESET COLORS
+
+  document.getElementById("resetColors").addEventListener("click", () => {
+    mapColor.value = "#3D4558";
+    backgroundColor.value = "#0C131D";
+    contourColor.value = "#FFFFFF";
+
+    updateColors();
+  });
+
+  // OPENSTREETMAP TOGGLE
+
+  const osmToggle = document.getElementById("osmToggle");
+
+  osmToggle.addEventListener("change", () => {
+    if (osmToggle.checked) {
+      osmLayer.addTo(map);
+    } else {
+      map.removeLayer(osmLayer);
+    }
+  });
+
+  // INITIALIZATION
+
+  renderJournal();
+  updateColors();
+</script>
+
+</body>
+</html>
